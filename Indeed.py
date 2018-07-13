@@ -6,6 +6,7 @@ class IndeedSpider(scrapy.Spider):
     name = 'indeed'
     allowed_domains = ['https://www.indeed.co.uk/jobs?q=python&l=West+Midlands']
     start_urls = ['https://www.indeed.co.uk/jobs?q=python&l=West+Midlands']
+    start = False
 
     def get_all_jobs_fromPage(self, page):
         for job in page:
@@ -20,13 +21,36 @@ class IndeedSpider(scrapy.Spider):
     def get_job_info(self, page_source):
         info = self.get_job_link(page_source)
         for page in info:
-            self.log(page)
+            yield page
 
 
     def parse(self, response):
 
-        page_source = response.css('div.row.result')
-        self.get_job_info(page_source)
+        if self.start == False:
+            page_source = response.css('div.row.result')
+            full_jobs = self.get_job_info(page_source)
+            self.start = True
+        else:
+            pass
+
+        for job in full_jobs:
+            scrapy.Request(url=job, callback=self.parse)
+
+            item = {
+            'jobTitle' : response.css('title::text').extract_first(),
+            'jobDescription_body': response.css('div.jobsearch-JobComponent-description > p::text').extract(),
+            'jobDesctiption_lists' : response.css('div.jobsearch-JobComponent-description > ul > li::text').extract(),
+            }
+            yield item
+        self.log('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
+        self.log(item)
+        self.log(job)
+        scrapy.Request(url=job, callback=self.parse)
+
+        #print ("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa")
+        #print ("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa")
+        #print ("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa")
+        #print next(item)
 
 
 
