@@ -1,77 +1,36 @@
-# -*- coding: utf-8 -*-
-import scrapy
+from bs4 import BeautifulSoup as bs
+import requests
+from user_agent import generate_user_agent
+import soap
+import urllib
+from lxml import etree
+import time
 
 
-class IndeedSpider(scrapy.Spider):
-    name = 'indeed'
-    allowed_domains = ['https://www.indeed.co.uk/jobs?q=python&l=West+Midlands']
-    start_urls = ['https://www.indeed.co.uk/jobs?q=python&l=West+Midlands']
-    start = False
-
-    def get_all_jobs_fromPage(self, page):
-        for job in page:
-            yield (job.css('a::attr(href)').extract_first())
-
-    def get_job_link(self, page_source):
-        jobs = self.get_all_jobs_fromPage(page_source)
-        for link in jobs:
-            job = 'https://www.indeed.co.uk' + link
-            yield job
-
-    def get_job_info(self, page_source):
-        info = self.get_job_link(page_source)
-        for page in info:
-            yield page
-
-
-    def parse(self, response):
-
-        if self.start == False:
-            page_source = response.css('div.row.result')
-            full_jobs = self.get_job_info(page_source)
-            self.start = True
+def get_info(page_link):
+    try:
+        page_response = requests.get(page_link, timeout=10)
+        if page_response.status_code == 200:
+            #page_content = BeautifulSoup(page_response.content, "html.parser")
+            page_content = bs(urllib.urlopen(page_link, "lxml"))
         else:
-            pass
+            print ("Failed!")
+            print(page_response.status_code)
+    except requests.Timeout as e:
+        print("It is time to timeout")
+        print(str(e))
+    except:
+        print(" Unknown exception!")
+    if 'page_content' in locals():
+        return page_content
+    else:
+        return None
 
-        for job in full_jobs:
-            scrapy.Request(url=job, callback=self.parse)
-
-            item = {
-            'jobTitle' : response.css('title::text').extract_first(),
-            'jobDescription_body': response.css('div.jobsearch-JobComponent-description > p::text').extract(),
-            'jobDesctiption_lists' : response.css('div.jobsearch-JobComponent-description > ul > li::text').extract(),
-            }
-            yield item
-        self.log('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA')
-        self.log(item)
-        self.log(job)
-        scrapy.Request(url=job, callback=self.parse)
-
-        #print ("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa")
-        #print ("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa")
-        #print ("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa")
-        #print next(item)
-
-
-
-
-# job = response.css('div.row.result')[0]
-#job.css('a::attr(href)').extract_first()
-#for job in response.css('div.row.result'):
-#    item = {
-#        'jobTitle': job.css('a.jobtitle::text').extract(),
-#        'location': job.css('span.location::text').extract(),
-#        'summary': job.css('span.summary::text').extract(),
-#    }
-#    yield item
-#next_page = response.css('div.pagination > a::attr(href)')
-#self.log("_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+")
-#self.log(next_page)
-#allowed_domains += next_page
-#self.log("_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+_+")
-#self.log(next_page)
-
-
-
-# scrapy runspider Indeed.py --output test.json
-# more test.json
+headers = {'User-Agent': generate_user_agent(device_type="desktop", os=('mac', 'linux'))}
+page_link ='https://www.indeed.co.uk/jobs?q=python&l=West+Midlands'
+base = 'https://www.indeed.co.uk'
+page_cont = get_info(page_link)
+for link in page_cont.findAll('a', attrs={'class':'jobtitle'}):
+        test = get_info( base + link['href'])
+        print(test)
+        time.sleep(20000)
