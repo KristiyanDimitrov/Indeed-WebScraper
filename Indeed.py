@@ -5,11 +5,13 @@ from lxml import etree
 import time
 
 
+
+
 def get_all_jobs(page_link):
     try:
         page_response = requests.get(page_link, timeout=10)
         if page_response.status_code == 200:
-            page_content = bs(urllib.urlopen(page_link))
+            page_content = bs(urllib.urlopen(page_link), "html.parser")
         else:
             print ("Failed!")
             print(page_response.status_code)
@@ -19,10 +21,6 @@ def get_all_jobs(page_link):
     except:
         print(" Unknown exception!")
     if 'page_content' in locals():
-        #next_page = page_content.find('div', attrs={'class': 'pagination'})
-        #print(next_page)
-        #time.sleep(20000)
-        #next_page = next_page.find_last('a')
         return page_content
     else:
         return None
@@ -38,8 +36,10 @@ def get_job(page_cont):
 def get_job_info(jobs, pageN):
     summary = ''
     readings = []
-    for job in jobs:
 
+    for job in jobs:
+        if job is None:
+            continue
         for item in job.findAll('span', attrs={'class': 'summary'}):
             for element in item:
                 try:
@@ -66,46 +66,51 @@ def get_job_info(jobs, pageN):
         }
         readings.append(read)
         summary = ""
-        print("Entry recorded!")
 
-    time.sleep(4)
+        # Make sure the file name is readable and valid.
+        try:
+            name = str(read['title'])
+            name = unicode(name, 'utf-8')
+            name = name.replace(" ", "_").replace("/", "").replace("|", "")
+        except UnicodeEncodeError:
+            name = "name_error"
+        job_name = name.encode('utf-8') + '.html'
+        with open(job_name, 'a') as the_job:
+            the_job.write(str(jobs))
+        print("Page source file for job(" + str(job_name) + ") created!")
+
     return readings
 
-
-numberOfPages_toRead = 3
-headers = {'User-Agent': generate_user_agent(device_type="desktop", os=('mac', 'linux'))}
-page_link ='https://www.indeed.co.uk/jobs?q=python&l=West+Midlands'
-base = 'https://www.indeed.co.uk'
-next_page = 1
-
-
-while next_page < numberOfPages_toRead:
-    page_cont = get_all_jobs(page_link)
-    jobs= get_job(page_cont)
-    readings = get_job_info(jobs, next_page)
-
-    # Constructing next page link
-    page_link = ("https://www.indeed.co.uk/jobs?q=python&l=West+Midlands&start=" + str(next_page*10))
-    next_page += 1
-
-    # Print found job titles
-    for read in readings:
-        print(read['title'])
-    time.sleep(15)
-
-    # Store page to testing
-    page_name = 'page_' + str(next_page-1) +'.html'
-    with open(page_name, 'a') as the_file:
-        the_file.write(str(page_cont))
-    print("Check the file!")
-
-    print("Navigate to page: " + str(next_page))
-    print(page_link)
+def main():
+    global base, page_link, headers, next_page
+    numberOfPages_toRead = 3
+    headers = {'User-Agent': generate_user_agent(device_type="desktop", os=('mac', 'linux'))}
+    page_link ='https://www.indeed.co.uk/jobs?q=python&l=West+Midlands'
+    base = 'https://www.indeed.co.uk'
+    next_page = 1
+    readings = []
 
 
-#for reading in readings:
-#    print(reading)
-#    print('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<')
-#    print('>>>>>>>>>>>>>>>>>>>' + reading['title'] + '>>>>>>>>>>>>>>>>>')
-#    print('<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<')
+    while next_page <= numberOfPages_toRead:
+        page_cont = get_all_jobs(page_link)
+        jobs= get_job(page_cont)
+        readings += get_job_info(jobs, next_page)
+
+        # Constructing next page link
+        page_link = ("https://www.indeed.co.uk/jobs?q=python&l=West+Midlands&start=" + str(next_page*10))
+        next_page += 1
+
+        # Store page for testing
+        page_name = 'page_' + str(next_page-1) +'.html'
+        with open(page_name, 'a') as the_file:
+            the_file.write(str(page_cont))
+        print("Page source file for page(" + str(next_page-1) + ") created!" )
+
+        print("\n\nNavigate to page: " + str(next_page))
+        print(page_link)
+        print(readings[-1])
+
+if __name__ == "__main__":
+    main()
+
 
