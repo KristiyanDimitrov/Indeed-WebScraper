@@ -1,9 +1,8 @@
-import soap, urllib, requests
+import soap, urllib, requests, pymongo, time
 from bs4 import BeautifulSoup as bs
 from user_agent import generate_user_agent
 from lxml import etree
-import time
-
+from pymongo import MongoClient
 
 
 
@@ -81,6 +80,19 @@ def get_job_info(jobs, pageN):
 
     return readings
 
+def store_readings(results):
+    user = 'mongodb://KristiyanDimitrov:************@ds247191.mlab.com:47191/jobs_info'
+    client = MongoClient(user)
+    db = client.jobs_info
+    collection = db.jobs
+
+    # Add all the found jobs by checking if they are in the db and updating it to avoid dublicates
+    for result in results:
+        collection.update(result, result, upsert=True)
+
+    print(str(len(results)) + " jobs stored/updated!")
+
+
 def main():
     global base, page_link, headers, next_page
     numberOfPages_toRead = 3
@@ -109,6 +121,9 @@ def main():
         print("\n\nNavigate to page: " + str(next_page))
         print(page_link)
         print(readings[-1])
+        store_readings(readings)
+        readings = []
+
 
 if __name__ == "__main__":
     main()
