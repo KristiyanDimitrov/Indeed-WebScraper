@@ -60,9 +60,9 @@ def get_job_info(jobs, pageN, link):
             job_title = job_title.text
         read = {
             'page_number': pageN,
-            'link' : link,
+            'link' : (base + link[len(readings)]),
             'title': job_title,
-            'summary': summary
+            'summary': summary.replace("\n", " ")
         }
         readings.append(read)
         summary = ""
@@ -82,7 +82,7 @@ def get_job_info(jobs, pageN, link):
     return readings
 
 def store_readings(results):
-    user = 'mongodb://KristiyanDimitrov:*********@ds247191.mlab.com:47191/jobs_info'
+    user = 'mongodb://KristiyanDimitrov:Sededed4@ds247191.mlab.com:47191/jobs_info'
     client = MongoClient(user)
     db = client.jobs_info
     collection = db.jobs
@@ -117,6 +117,7 @@ def main():
         # Get job data
         readings += get_job_info(jobs, next_page, link)
 
+
         # Constructing next page link
         page_link = ("https://www.indeed.co.uk/jobs?q=python&l=West+Midlands&start=" + str(next_page*10))
         next_page += 1
@@ -134,5 +135,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
